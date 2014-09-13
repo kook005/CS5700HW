@@ -30,7 +30,8 @@ public class SocketWrapper {
 			socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			return true;
 		} catch (Exception e) {
-			System.out.println(e.getMessage());
+			System.err.println(e.getMessage());
+			System.exit(1);
 			return false;
 		}
 	}
