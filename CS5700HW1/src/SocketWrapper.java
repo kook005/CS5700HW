@@ -2,7 +2,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 
@@ -10,8 +9,8 @@ public class SocketWrapper {
 	private Socket socket;
 	private BufferedWriter socketWriter;
 	private BufferedReader socketReader;
-	private String hostName = "localhost";
-	private int port = 30000;
+	private String hostName = "cs5700f14.ccs.neu.edu";
+	private int port = 27993;
 	private boolean ssl = false;
 
 	public SocketWrapper(String portNum, String hostName, boolean ssl) {
@@ -27,11 +26,8 @@ public class SocketWrapper {
 	public boolean createSocket() {
 		try {
 			socket = new Socket(getHostName(), getPort());
-			OutputStream os = socket.getOutputStream();
-			OutputStreamWriter osw = new OutputStreamWriter(os);
-			socketWriter = new BufferedWriter(osw);
-			socketReader = new BufferedReader(new InputStreamReader(
-					socket.getInputStream()));
+			socketWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+			socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			return true;
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
@@ -44,8 +40,7 @@ public class SocketWrapper {
 			try {
 				socket.close();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				System.out.println("Connection closed failed!");
+				System.out.println("closing connection failed!");
 			}
 		}
 	}
