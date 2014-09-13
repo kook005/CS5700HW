@@ -2,9 +2,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.net.InetAddress;
 import java.net.Socket;
 
 public class SocketWrapper {
@@ -28,11 +26,8 @@ public class SocketWrapper {
 	public boolean createSocket() {
 		try {
 			socket = new Socket(getHostName(), getPort());
-			OutputStream os = socket.getOutputStream();
-			OutputStreamWriter osw = new OutputStreamWriter(os);
-			socketWriter = new BufferedWriter(osw);
-			socketReader = new BufferedReader(new InputStreamReader(
-					socket.getInputStream()));
+			socketWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+			socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			return true;
 		} catch (Exception e) {
 			System.out.println(e.getMessage());

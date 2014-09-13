@@ -48,7 +48,7 @@ public class Client {
 		} catch (Exception e) {
 			System.err.println("Invalid input format. Check your input format!");
 			System.err.println("client <-p port> <-s> [hostname] [NEU ID]");
-			System.exit(-1);
+			System.exit(1);
 		}
 
 		SocketWrapper socketWrapper = null;
@@ -76,12 +76,10 @@ public class Client {
 				responseStatus = response[1];
 			}
 
-			System.out.println("response: " + response);
-			System.out.println("success!");
 			System.out.println(response[1]);
-
+		
 		} catch (Exception e) {
-			System.out.println(e);
+			System.err.println(e.getMessage());
 		} finally {
 			if (socketWrapper != null)
 				socketWrapper.closeSocket();
@@ -131,12 +129,12 @@ public class Client {
 			}
 
 			return true;
+			
 		}
 
 		return true;
 	}
-
-	public static boolean isValidInteger(String s) {
+	private static boolean isValidInteger(String s) {
 
 		int num = 0;
 
@@ -157,16 +155,16 @@ public class Client {
 		System.exit(1);
 	}
 
-	public static String createHelloMessage() {
+	private static String createHelloMessage() {
 		return String.format("%s %s %s\n", COURSE, Message.HELLO.toString(),
 				NUID);
 	}
 
-	public static String createSolutionMessage(int solution) {
+	private static String createSolutionMessage(int solution) {
 		return String.format("%s %d\n", COURSE, solution);
 	}
 
-	public static int calculateExpression(String number1, String number2,
+	private static int calculateExpression(String number1, String number2,
 			String op) {
 		int num1 = Integer.parseInt(number1);
 		int num2 = Integer.parseInt(number2);
