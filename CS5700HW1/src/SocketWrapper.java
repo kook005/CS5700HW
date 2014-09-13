@@ -27,7 +27,7 @@ public class SocketWrapper {
 
 	public boolean createSocket() {
 		try {
-			socket = new Socket(InetAddress.getByName("129.10.116.53"), 27993);
+			socket = new Socket(getHostName(), getPort());
 			OutputStream os = socket.getOutputStream();
 			OutputStreamWriter osw = new OutputStreamWriter(os);
 			socketWriter = new BufferedWriter(osw);
