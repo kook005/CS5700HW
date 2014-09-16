@@ -1,0 +1,66 @@
+--------------
+0. Useful info
+--------------
+
+(1) compile the code : run make 
+
+(2) clean the executable file : run make clean
+
+(3) run client: ./client <-p port> <-s> [hostname] [NEU ID]
+
+
+-------------------------
+1. Command Line Arguments 
+-------------------------
+Example : ./client <-p port> <-s> [hostname] [NEU ID]
+
+[hostname] | [NEU ID]
+  (required) hostname is the server name, neu id is the valid new id
+
+-p port
+  (optional) specify the port number of server, default is 27993 (27994 for ssl version)
+
+-s 
+  (optional) specifies the version of server. If -s is used, the ssl version of server will be used to connect
+
+
+------------------
+2. Design Approach
+------------------
+
+In this project, we use java socket library to implement the client program. We wrapped the useful information related to the socket in the 
+class SocketWrapper and call it in the main class.
+
+We follow the protocol specified in the project description exactly.
+
+For SSL version of client, we make use of JSSE libray to implement it. We used openssl to get the certificate of server,
+and then use keytool to generate keystore for the server which is required by SSLSocket.
+
+
+-------------------
+3. Challenges Faced
+-------------------
+(1) when we implement the SSl version of client, it took us a little time to figure out how to get the server's SSL configuration.
+    Finally, we use openssl to get the certificate of server.
+
+
+
+----------------------------
+4. Approach to test our code
+----------------------------
+(1) Input test:
+
+    To make sure the command specify the correct arguments, we write some simple junit test to test different scenarios. To make sure
+    it satisfies the requirements.
+
+(2) Functional test:
+    
+    To make sure we can receive the correct secret flag, after we finish the code, we run client(for both) several times to get result multiple times.
+    And make sure that we get the same result every time. (use some simple tools : like diff)
+
+(3) Exception test:
+    
+    To make sure that our client program could response to the unvalid message, we write a simple server which could response the message with wrong
+    format.
+	
+

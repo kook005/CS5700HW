@@ -34,6 +34,9 @@ public class SocketWrapper {
 		}
 	}
 
+	/**
+	 * method to create ssl socket if -s is specified
+	 */
 	private void createSSLSocket() {
 		try {
 			KeyStore tks = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -54,6 +57,9 @@ public class SocketWrapper {
 		}
 	}
 
+	/**
+	 * method to create normal socket
+	 */
 	public void createSocket() {
 			try {
 				socket = new Socket(getHostName(), getPort());
@@ -68,6 +74,9 @@ public class SocketWrapper {
 			}
 	}
 
+	/**
+	 * method to close socket
+	 */
 	public void closeSocket() {
 		if (this.socket != null && !socket.isClosed()) {
 			try {
@@ -78,11 +87,21 @@ public class SocketWrapper {
 		}
 	}
 
+	/**
+	 * method to send message to server
+	 * @param message
+	 * @throws IOException
+	 */
 	public void sendMessage(String message) throws IOException {
 		getSocketWriter().write(message);
 		getSocketWriter().flush();
 	}
 
+	/**
+	 * method to receive message from server
+	 * @return
+	 * @throws IOException
+	 */
 	public String readMessage() throws IOException {
 		return getSocketReader().readLine();
 	}

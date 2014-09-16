@@ -12,6 +12,8 @@ public class Client {
 		String hostName = null;
 		String portNum = null;
 		boolean ssl = false;
+		
+		
 		// validate input
 		try {
 			if (args.length < 2 || args.length > 5) {
@@ -51,12 +53,15 @@ public class Client {
 			System.exit(1);
 		}
 
+		// start the communication with server
 		SocketWrapper socketWrapper = null;
 		try {
 			socketWrapper = new SocketWrapper(hostName, portNum, ssl);
 			socketWrapper.sendMessage(createHelloMessage());
 			String[] response = socketWrapper.getResponse();
 
+			
+			//validate the information received
 			if (!validate(response, socketWrapper)) {
 				terminate(socketWrapper);
 			}
@@ -86,6 +91,12 @@ public class Client {
 		}
 	}
 
+	
+	/** validate the received message is the correct format, otherwise terminate the client
+	 * @param message
+	 * @param socketWrapper
+	 * @return
+	 */
 	private static boolean validate(String[] response,
 			SocketWrapper socketWrapper) {
 
@@ -134,6 +145,12 @@ public class Client {
 
 		return true;
 	}
+	
+	/**
+	 * if s is an integer between 0 and 1000
+	 * @param s
+	 * @return
+	 */
 	private static boolean isValidInteger(String s) {
 
 		int num = 0;
@@ -147,6 +164,11 @@ public class Client {
 		return num <= 1000 ? true : false;
 	}
 
+	
+	/**
+	 * function to terminate the client, make sure socket is closed
+	 * @param socketWrapper
+	 */
 	private static void terminate(SocketWrapper socketWrapper) {
 		System.err.println("Not valid resposne");
 		if (socketWrapper != null) {
@@ -155,15 +177,32 @@ public class Client {
 		System.exit(1);
 	}
 
+	/**
+	 * helper function to create hello message
+	 * @return
+	 */
 	private static String createHelloMessage() {
 		return String.format("%s %s %s\n", COURSE, Message.HELLO.toString(),
 				NUID);
 	}
 
+	/**
+	 * helper function to create solution message
+	 * @param solution
+	 * @return
+	 */
 	private static String createSolutionMessage(int solution) {
 		return String.format("%s %d\n", COURSE, solution);
 	}
 
+	
+	/**
+	 * helper function to calculate the result
+	 * @param number1
+	 * @param number2
+	 * @param op
+	 * @return
+	 */
 	private static int calculateExpression(String number1, String number2,
 			String op) {
 		int num1 = Integer.parseInt(number1);
