@@ -53,7 +53,7 @@ public class Client {
 
 		SocketWrapper socketWrapper = null;
 		try {
-			socketWrapper = new SocketWrapper(portNum, hostName, ssl);
+			socketWrapper = new SocketWrapper(hostName, portNum, ssl);
 			socketWrapper.sendMessage(createHelloMessage());
 			String[] response = socketWrapper.getResponse();
 

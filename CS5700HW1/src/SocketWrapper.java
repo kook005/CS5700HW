@@ -1,9 +1,23 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 public class SocketWrapper {
 	private Socket socket;
@@ -11,28 +25,53 @@ public class SocketWrapper {
 	private BufferedReader socketReader;
 	private String hostName = "cs5700f14.ccs.neu.edu";
 	private int port = 27993;
-	private boolean ssl = false;
+	private int sslPort = 27994;
+	private String trustStorePath = "src/public.jks";
+	private char[] trustStorePassword = "kook005".toCharArray();
 
-	public SocketWrapper(String portNum, String hostName, boolean ssl) {
-		if (portNum != null)
-			this.setPort(Integer.parseInt(portNum));
+	public SocketWrapper(String hostName, String portNum, boolean ssl) {
 		if (hostName != null)
 			this.setHostName(hostName);
-		if (ssl)
-			this.ssl = ssl;
-		createSocket();
+		if (ssl) {
+			if (portNum != null)
+				this.setSslPort(Integer.parseInt(portNum));
+			createSSLSocket();
+		} else {
+			if (portNum != null)
+				this.setPort(Integer.parseInt(portNum));
+			createSocket();
+		}
 	}
 
-	public boolean createSocket() {
+	private void createSSLSocket() {
+		KeyStore tks;
+		try {
+			tks = KeyStore.getInstance(KeyStore.getDefaultType());
+			tks.load(new FileInputStream(trustStorePath), trustStorePassword);
+			
+			TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+			tmf.init(tks);
+			
+			SSLContext ctx = SSLContext.getInstance("SSL");
+			ctx.init(null, tmf.getTrustManagers(), null);
+			
+			socket = ctx.getSocketFactory().createSocket(getHostName(), getSslPort());
+			socketWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+			socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
+	}
+
+	public void createSocket() {
 		try {
 			socket = new Socket(getHostName(), getPort());
 			socketWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 			socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			return true;
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
 			System.exit(1);
-			return false;
 		}
 	}
 
@@ -91,4 +130,13 @@ public class SocketWrapper {
 	public void setSocketReader(BufferedReader socketReader) {
 		this.socketReader = socketReader;
 	}
+	
+	public int getSslPort() {
+		return sslPort;
+	}
+
+	public void setSslPort(int sslPort) {
+		this.sslPort = sslPort;
+	}
+
 }
