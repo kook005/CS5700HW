@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.KeyStore;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
@@ -54,14 +55,17 @@ public class SocketWrapper {
 	}
 
 	public void createSocket() {
-		try {
-			socket = new Socket(getHostName(), getPort());
-			socketWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-			socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-		} catch (Exception e) {
-			System.err.println(e.getMessage());
-			System.exit(1);
-		}
+			try {
+				socket = new Socket(getHostName(), getPort());
+				socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+				socketWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+			} catch (UnknownHostException e) {
+				System.err.println("Invalid HostName!");
+				System.exit(1);
+			} catch (IOException e) {
+				System.err.println("IOException Encoutered!");
+				System.exit(1);
+			}
 	}
 
 	public void closeSocket() {
