@@ -26,7 +26,7 @@ public class SocketWrapper {
 	private String hostName = "cs5700f14.ccs.neu.edu";
 	private int port = 27993;
 	private int sslPort = 27994;
-	private String trustStorePath = "src/public.jks";
+	private String trustStorePath = "public.jks";
 	private char[] trustStorePassword = "kook005".toCharArray();
 
 	public SocketWrapper(String hostName, String portNum, boolean ssl) {
