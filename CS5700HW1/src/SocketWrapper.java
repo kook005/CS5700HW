@@ -1,22 +1,12 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
-import java.security.KeyManagementException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-
-import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
 public class SocketWrapper {
@@ -44,17 +34,16 @@ public class SocketWrapper {
 	}
 
 	private void createSSLSocket() {
-		KeyStore tks;
 		try {
-			tks = KeyStore.getInstance(KeyStore.getDefaultType());
+			KeyStore tks = KeyStore.getInstance(KeyStore.getDefaultType());
 			tks.load(new FileInputStream(trustStorePath), trustStorePassword);
-			
+
 			TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
 			tmf.init(tks);
-			
+
 			SSLContext ctx = SSLContext.getInstance("SSL");
 			ctx.init(null, tmf.getTrustManagers(), null);
-			
+
 			socket = ctx.getSocketFactory().createSocket(getHostName(), getSslPort());
 			socketWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 			socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -80,7 +69,7 @@ public class SocketWrapper {
 			try {
 				socket.close();
 			} catch (IOException e) {
-				System.out.println("closing connection failed!");
+				System.err.println("closing connection failed!");
 			}
 		}
 	}
@@ -130,7 +119,7 @@ public class SocketWrapper {
 	public void setSocketReader(BufferedReader socketReader) {
 		this.socketReader = socketReader;
 	}
-	
+
 	public int getSslPort() {
 		return sslPort;
 	}

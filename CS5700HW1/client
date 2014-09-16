@@ -1,11 +1,6 @@
 #!/bin/bash
 
 cd src
-i=0
-while [ $i -le 100 ]
-do
-	java Client $* >> temp.txt
-	let ++i
-done
+java Client $*
 cd ..
 
