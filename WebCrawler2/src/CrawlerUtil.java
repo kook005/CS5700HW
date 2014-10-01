@@ -1,5 +1,3 @@
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -8,7 +6,12 @@ import java.util.regex.Pattern;
 
 
 public class CrawlerUtil {
-
+	public static final String CSRF_TOKEN_PATTERN = "csrftoken=(\\w+).*";
+	public static final String SESSION_ID_PATTERN = "sessionid=(\\w+).*";
+	public static final String URL_PATH_PATTERN = "<a href=\"(.+?)\">";
+	public static final String REDIRECT_LOCATION_PATTERN = "Location: (.*)";
+	public static final String SECRET_FLAG_PATTERN = "<h2 class='secret_flag' style=\"color:red\">FLAG: (.*?)</h2>";
+	public static final String ERROR_LOGIN_PATTERN = "class=\"(errorlist)\"";
 	public static String regexSingleHelper(String pattern, String response) {
 		Pattern p = Pattern.compile(pattern);
 		Matcher m = p.matcher(response);
@@ -34,15 +37,6 @@ public class CrawlerUtil {
 		return result;
 	}
 
-	public static String getPathFromUrl(String url) throws URISyntaxException {
-		URI uri = new URI(url);
-		String path = uri.getRawPath();
-		if (path == null || path.length() == 0) {
-			path = "/";
-		}
-		return path;
-	}
-	
 	public static Set<String> extractLinks(String rawPage, String page) {
 		int index = 0;
 		Set<String> links = new HashSet<>();

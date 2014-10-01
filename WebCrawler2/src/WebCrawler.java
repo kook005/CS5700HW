@@ -1,112 +1,73 @@
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
 
 public class WebCrawler {
 
-	public String host;
-	public int port;
+	private static final String LOGIN_URL = "http://cs5700f14.ccs.neu.edu/accounts/login/?next=/fakebook/";
+	private static final String LOGIN_PATH = "/accounts/login/";
+	private static final String ROOT_PATH = "/";
+	private String host;
+	private int port;
+	private String username;
+	private String passWord;
+	private String csrfToken;
+	private String authSessionid;
+	private String sessionId;
 
-	public String username;
-	public String passWord;
-
-	public String csrfToken;
-	public String authSessionid;
-	public String sessionId;
-
-	public String loginUrl = "http://cs5700f14.ccs.neu.edu/accounts/login/?next=/fakebook/";
-	public String homePath = "/fakebook/";
-	public String rootPath = "/";
-
-	public LinkedList<String> pathQueue;
-	public Set<String> pathVisited;
-	public Set<String> secretFlags;
-
-	public static final String CSRF_TOKEN_PATTERN = "csrftoken=(\\w+).*";
-	public static final String SESSION_ID_PATTERN = "sessionid=(\\w+).*";
-	public static final String URL_PATH_PATTERN = "<a href=\"(.+?)\">";
-	public static final String REDIRECT_LOCATION_PATTERN = "Location: (.*)";
-	public static final String SECRET_FLAG_PATTERN = "<h2 class='secret_flag' style=\"color:red\">(.*?)</h2>";
+	private LinkedList<String> pathQueue;
+	private Set<String> pathVisited;
+	private Set<String> secretFlags;
 
 	public WebCrawler(String username, String passwd) {
 		this.username = username;
 		this.passWord = passwd;
+		this.port = 80;
 	}
 
 	/***
 	 * Initial WebCrawler to set host, port and rootpath
 	 * 
-	 * @throws URISyntaxException
 	 */
-	void init() throws URISyntaxException {
-		URI uri = new URI(loginUrl);
-		host = uri.getHost();
-		homePath = uri.getRawPath();
-		if (homePath == null || homePath.length() == 0) {
-			homePath = "/";
+	void init() {
+		try {
+			URI uri = new URI(LOGIN_URL);
+			host = uri.getHost();
+			pathQueue = new LinkedList<>();
+			pathVisited = new HashSet<>();
+			secretFlags = new HashSet<>();
+		} catch (URISyntaxException e) {
+			System.err.println("invalid login url");
+			System.exit(1);
 		}
-		String protocol = uri.getScheme();
-		port = uri.getPort();
-		if (port == -1) {
-			if (protocol.equals("http")) {
-				port = 80;
-			} else if (protocol.equals("https")) {
-				port = 443;
-			}
-		}
-
-		homePath = uri.getRawPath();
-
-		pathQueue = new LinkedList<>();
-		pathVisited = new HashSet<>();
-		secretFlags = new HashSet<>();
-
 	}
 
 	public void process() {
 
 		// step1. use the rootUrl to get the authsessionId and csrftoken;
-		System.out.println("start auth");
 		auth();
 
 		// step2. use the username and password to get the visit sessionId
-		System.out.println("start login");
 		login();
 
 		// step2. process the url in queue until queue is empty || 5 secret
 		// flags are found
+		pathQueue.add(ROOT_PATH);
+		pathVisited.add(ROOT_PATH);
 
-		System.out.println("start process");
-		pathQueue.add(rootPath);
-		pathVisited.add(rootPath);
+		processPath();
 
-		// while (!shouldTerminate()) {
-		//
-		// String currentPath = pathQueue.pollFirst();
-		// processPath(currentPath);
-		// }
-
-		processPath2();
-		
-		
-		
 		// step3. print the flags
 		printFlags();
-		printMsg("finish", "finish");
 	}
 
 	private void printFlags() {
-
 		for (String flag : secretFlags) {
 			System.out.println(flag);
 		}
@@ -117,180 +78,101 @@ public class WebCrawler {
 	}
 
 	private void auth() {
-
-		CrawlerSocket authSocket = new CrawlerSocket(host, port, homePath);
-
-		try {
-			authSocket.init();
-			authSocket.sendHttpGetRequest(null, null);
-			String authResponse = authSocket.getHttpResponse();
-
-			this.csrfToken = CrawlerUtil.regexSingleHelper(CSRF_TOKEN_PATTERN,
-					authResponse);
-			this.authSessionid = CrawlerUtil.regexSingleHelper(
-					SESSION_ID_PATTERN, authResponse);
-			// System.out.println(this.csrftoken);
-			// System.out.println(this.authSessionid);
-
-			// printMsg("auth", authResponse);
-
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			authSocket.close();
-		}
+		CrawlerSocket authSocket = new CrawlerSocket(host, port);
+		authSocket.sendHttpGetRequest(LOGIN_PATH, null, null);
+		String authResponse = authSocket.getHttpResponse();
+		this.csrfToken = CrawlerUtil.regexSingleHelper(
+				CrawlerUtil.CSRF_TOKEN_PATTERN, authResponse);
+		this.authSessionid = CrawlerUtil.regexSingleHelper(
+				CrawlerUtil.SESSION_ID_PATTERN, authResponse);
+		authSocket.close();
 	}
 
 	private void login() {
-		CrawlerSocket loginSocket = new CrawlerSocket(host, port, homePath);
+		CrawlerSocket loginSocket = new CrawlerSocket(host, port);
 
 		try {
-			loginSocket.init();
-			String loginContent = "username=" + urlEncode(username) + "&"
+			String content = "username=" + urlEncode(username) + "&"
 					+ "password=" + urlEncode(passWord)
 					+ "&csrfmiddlewaretoken=" + urlEncode(csrfToken) + "&next="
 					+ urlEncode("/fakebook/");
 
-			loginSocket.sendHttpPostRequest(csrfToken, authSessionid,
-					loginContent);
+			loginSocket.sendHttpPostRequest(LOGIN_PATH, csrfToken,
+					authSessionid, content);
 
 			String loginResponse = loginSocket.getHttpResponse();
 
-			// System.out.println("loginResponse" + loginResponse);
+			String error = CrawlerUtil.regexSingleHelper(CrawlerUtil.ERROR_LOGIN_PATTERN, loginResponse);
+			if("errorlist".equals(error)) {
+				System.err.println("invalid username and password!");
+				System.exit(1);
+			}
+				
+			this.sessionId = CrawlerUtil.regexSingleHelper(
+					CrawlerUtil.SESSION_ID_PATTERN, loginResponse);
 
-			this.sessionId = CrawlerUtil.regexSingleHelper(SESSION_ID_PATTERN,
-					loginResponse);
-
-			// printMsg("login", loginResponse);
-
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			System.err.println(e.getMessage());
+			System.exit(1);
 		} finally {
 			loginSocket.close();
 		}
 	}
 
-	void processPath(String path) {
-
-		System.out.println("--------------");
-		System.out.println("Get " + path);
-		CrawlerSocket crawlerSocket = new CrawlerSocket(host, port, path);
-
-		try {
-
-			long t = System.currentTimeMillis();
-			crawlerSocket.init();
-			long t1 = System.currentTimeMillis();
-
-			crawlerSocket.sendHttpGetRequest(csrfToken, sessionId);
-			String response = crawlerSocket.getHttpResponse();
-
-			long t2 = System.currentTimeMillis();
-
-			System.out.println("response:" + response.substring(0, 16));
-			analyzeResponse(response, path);
-			long t3 = System.currentTimeMillis();
-
-			System.out.println("Time to create socket " + (t1 - t));
-			System.out.println("Time to get response " + (t2 - t1));
-			System.out.println("Time to analyze " + (t3 - t2));
-
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			crawlerSocket.close();
-		}
-
-	}
-
-	public String buildMessage(String path) {
-		StringBuilder sb = new StringBuilder();
-		sb.append("GET " + path + " HTTP/1.1\r\n");
-		sb.append("HOST: " + host + "\r\n");
-
-		if (sessionId != null) {
-			sb.append("Cookie:csrftoken=" + csrfToken + "; sessionid="
-					+ sessionId + "\r\n");
-		}
-
-		sb.append("Connection: keep-alive\r\n\r\n");
-		return sb.toString();
-	}
-
-	void processPath2() {
+	public void processPath() {
 
 		String path = pathQueue.pollFirst();
-		Socket crawlerSocket = null;
-		BufferedReader bf = null;
-		PrintWriter wr = null;
+		CrawlerSocket crawlerSocket = new CrawlerSocket(host, port);
+		BufferedReader bf = crawlerSocket.getReader();
+		crawlerSocket.sendHttpGetRequest(path, this.csrfToken, this.sessionId);
+		
 		try {
-			crawlerSocket = new Socket(host, port);
-			bf = new BufferedReader(new InputStreamReader(
-					crawlerSocket.getInputStream()));
-			wr = new PrintWriter(crawlerSocket.getOutputStream());
-
-			String requestMsg = buildMessage(path);
-			System.out.println("--------------");
-			System.out.println("Get " + path);
-
-			wr.write(requestMsg);
-			wr.flush();
-
-			String line = null;
-
 			while (true) {
+				String line = bf.readLine();
 
-				line = readAndPrint(bf);
-
-				// enter the request body
+				// enter the response header
 				if (line.contains("HTTP/1.1")) {
-
 					String status = null;
 					String encodeMode = null;
 					String connection = null;
-					// if 500, internal error, continuein
+					String location = null;
+
 					if (line.contains("HTTP/1.1 500")) {
 						pathQueue.addFirst(path);
-						System.out.println("");
 						status = "500";
-					}
-
-					if (line.contains("HTTP/1.1 404")) {
+					} else if (line.contains("HTTP/1.1 404")) {
 						status = "404";
-					}
-
-					if (line.contains("HTTP/1.1 200")) {
+					} else if (line.contains("HTTP/1.1 403")) {
+						status = "403";
+					} else if (line.contains("HTTP/1.1 301")) {
+						status = "301";
+					} else if (line.contains("HTTP/1.1 200")) {
 						status = "200";
 					}
 
-					int length = 0;
+					int length = -1;
 
 					// read the head info until a /r/n
 					while (!"".equals(line)) {
-						line = readAndPrint(bf);
+						line = bf.readLine();
 
 						if (line.contains("Content-Length")) {
 							String lenStr = line.split(":\\s")[1];
 							length = Integer.parseInt(lenStr);
-						}
-
-						if (line.contains("Transfer-Encoding")) {
+						} else if (line.contains("Transfer-Encoding")) {
 							encodeMode = line.split(":\\s")[1];
-						}
-
-						if (line.contains("Connection")) {
+						} else if (line.contains("Connection")) {
 							connection = line.split(":\\s")[1];
+						} else if (status.equals("301") && line.contains("Location:")) {
+							location = line.split(" ")[1];
+							addPath(location);
 						}
-
 					}
-
-					// this is chunked response
+					
+					//enter response body
 					if ("chunked".equals(encodeMode)) {
-
-						line = readAndPrint(bf);
+						// this is chunked response
+						line = bf.readLine();
 						int size = 0;
 						StringBuilder sb = new StringBuilder();
 
@@ -298,69 +180,27 @@ public class WebCrawler {
 						while (!"0".equals(line)) {
 							// read size of this chuck
 							String sizeStr = line;
-
 							size = Integer.parseInt(sizeStr, 16);
 							char[] buffer = new char[size];
-
-							int remainingLen = size;
-							int idx = 0;
-							int readSize = remainingLen < 500 ? remainingLen
-									: 500;
-
-							while (remainingLen > 0) {
-								int readLen = bf.read(buffer, idx, readSize);
-								remainingLen -= readLen;
-								idx += readLen;
-
-								if (remainingLen < readSize) {
-									readSize = remainingLen;
-								}
-							}
-
+							readContent(bf, size, buffer);
 							String body = new String(buffer);
 							sb.append(body);
-
-							// System.out.println(body);
-
-							line = readAndPrint(bf);
-
+							line = bf.readLine();
 							while ("".equals(line)) {
-								line = readAndPrint(bf);
+								line = bf.readLine();
 							}
 						}
-
 						String contentBody = sb.toString();
 						analyzeResponse(contentBody, path);
-						path = sendNextPath(wr);
 
-					}
-
-					// this is normal response
-					if (length != 0) {
-
-						// System.out.println("length used ------------" +
-						// length);
-
+					} else if (length != -1) {
+						// this is normal response
 						// get body and analyze
 						char[] buffer = new char[length];
 
-						// prevent the length is too big
-						int remainingLen = length;
-						int idx = 0;
-						int readSize = remainingLen < 500 ? remainingLen : 500;
-
-						while (remainingLen > 0) {
-							int readLen = bf.read(buffer, idx, readSize);
-							remainingLen -= readLen;
-							idx += readLen;
-
-							if (remainingLen < readSize) {
-								readSize = remainingLen;
-							}
-						}
+						readContent(bf, length, buffer);
 
 						String body = new String(buffer);
-						// System.out.println(body);
 
 						if ("200".equals(status)) {
 							analyzeResponse(body, path);
@@ -368,75 +208,40 @@ public class WebCrawler {
 
 						// if it should be terminated
 						if (shouldTerminate()) {
-							System.out.println("terminated");
 							break;
 						}
-
-						// send next path
-						path = sendNextPath(wr);
 					}
 
 					if ("close".equals(connection)) {
-						bf.close();
-						wr.close();
-
 						crawlerSocket.close();
-						crawlerSocket = new Socket(host, port);
-
-						bf = new BufferedReader(new InputStreamReader(
-								crawlerSocket.getInputStream()));
-						wr = new PrintWriter(crawlerSocket.getOutputStream());
-
-						sendNextPath(wr);
+						crawlerSocket = new CrawlerSocket(host, port);
+						bf = crawlerSocket.getReader();
 					}
-
-					if ("404".equals(status)) {
-						sendNextPath(wr);
-					}
-
+					path = pathQueue.pollFirst();
+					crawlerSocket.sendHttpGetRequest(path, csrfToken, sessionId);
 				}
 			}
-
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			wr.close();
-			try {
-				bf.close();
-				crawlerSocket.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
+	}
+
+	private void readContent(BufferedReader bf, int size, char[] buffer)
+			throws IOException {
+		int remainingLen = size;
+		int curPostion = 0;
+		int readSize = remainingLen < 500 ? remainingLen : 500;
+
+		while (remainingLen > 0) {
+			int readLen = bf.read(buffer, curPostion, readSize);
+			remainingLen -= readLen;
+			curPostion += readLen;
+
+			if (remainingLen < readSize) {
+				readSize = remainingLen;
 			}
 		}
-
-	}
-
-	private String readAndPrint(BufferedReader bf) throws IOException {
-		String line;
-		line = bf.readLine();
-//		System.out.println(line);
-		return line;
-	}
-
-	private String sendNextPath(PrintWriter wr) {
-		String path;
-		String requestMsg;
-		path = pathQueue.pollFirst();
-		requestMsg = buildMessage(path);
-		System.out.println("--------------");
-		System.out.println("Get" + path);
-		wr.write(requestMsg);
-		wr.flush();
-		return path;
-	}
-
-	private void printMsg(String msgHead, String msgContent) {
-		System.out.println();
-		System.out.println(msgHead + "----------------------");
-		System.out.println(msgContent);
-		System.out.println("\n---------------------------");
 	}
 
 	void analyzeResponse(String response, String currentPath)
@@ -444,108 +249,44 @@ public class WebCrawler {
 
 		Set<String> paths = CrawlerUtil.extractLinks(response, response);
 
-		for (String p : paths) {
-			if (validate(p)) {
-//				System.out.println("current path:" + currentPath
-//						+ "------------------->" + p);
-			}
-		}
+		addPath(paths);
 
 		Set<String> flags = CrawlerUtil.regexMultipleHelper(
-				SECRET_FLAG_PATTERN, response);
+				CrawlerUtil.SECRET_FLAG_PATTERN, response);
 		for (String s : flags) {
 			secretFlags.add(s);
-			System.out.println("Oh, yeah! find one flag : " + s);
 		}
 	}
 
-	boolean validate(String path) {
-		if (!path.startsWith("/") || pathVisited.contains(path)
-				|| ".".equals(path)) {
-			return false;
+	private void addPath(Set<String> paths) {
+		for (String path : paths) {
+			if (!path.startsWith("/") || pathVisited.contains(path)
+					|| ".".equals(path)) {
+				continue;
+			}
+			pathQueue.add(path);
+			pathVisited.add(path);
 		}
+	}
 
+	private void addPath(String path) {
+		URI uri = null;
+		try {
+			uri = new URI(path);
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
+		}
+		if (!uri.getHost().equals(host)) 
+			return;
+		path = uri.getRawPath();
+		if(path == null || pathVisited.contains(path))
+			return;
 		pathQueue.add(path);
 		pathVisited.add(path);
-
-		return true;
-
 	}
 
 	private static String urlEncode(String content)
 			throws UnsupportedEncodingException {
 		return URLEncoder.encode(content, "UTF-8");
-	}
-
-	public String getHost() {
-		return host;
-	}
-
-	public void setHost(String host) {
-		this.host = host;
-	}
-
-	public int getPort() {
-		return port;
-	}
-
-	public void setPort(int port) {
-		this.port = port;
-	}
-
-	public String getCsrftoken() {
-		return csrfToken;
-	}
-
-	public void setCsrftoken(String csrftoken) {
-		this.csrfToken = csrftoken;
-	}
-
-	public String getAuthSessionid() {
-		return authSessionid;
-	}
-
-	public void setAuthSessionid(String authSessionid) {
-		this.authSessionid = authSessionid;
-	}
-
-	public String getSessionid() {
-		return sessionId;
-	}
-
-	public void setSessionid(String sessionid) {
-		this.sessionId = sessionid;
-	}
-
-	public String getUsername() {
-		return username;
-	}
-
-	public void setUsername(String username) {
-		this.username = username;
-	}
-
-	public String getPasswd() {
-		return passWord;
-	}
-
-	public void setPasswd(String passwd) {
-		this.passWord = passwd;
-	}
-
-	public String getLoginUrl() {
-		return loginUrl;
-	}
-
-	public void setLoginUrl(String loginUrl) {
-		this.loginUrl = loginUrl;
-	}
-
-	public String getHomePath() {
-		return homePath;
-	}
-
-	public void setHomePath(String homePath) {
-		this.homePath = homePath;
 	}
 }
