@@ -39,7 +39,7 @@ public class CrawlerUtil {
 
 	public static Set<String> extractLinks(String rawPage, String page) {
 		int index = 0;
-		Set<String> links = new HashSet<>();
+		Set<String> links = new HashSet<String>();
 		while ((index = page.indexOf("<a ", index)) != -1) {
 			if ((index = page.indexOf("href", index)) == -1)
 				break;
