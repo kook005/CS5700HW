@@ -81,6 +81,8 @@ public class WebCrawler {
 		CrawlerSocket authSocket = new CrawlerSocket(host, port);
 		authSocket.sendHttpGetRequest(LOGIN_PATH, null, null);
 		String authResponse = authSocket.getHttpResponse();
+		
+		//get the csrfToken and authSessionId
 		this.csrfToken = CrawlerUtil.regexSingleHelper(
 				CrawlerUtil.CSRF_TOKEN_PATTERN, authResponse);
 		this.authSessionid = CrawlerUtil.regexSingleHelper(
@@ -88,6 +90,9 @@ public class WebCrawler {
 		authSocket.close();
 	}
 
+	/***
+	 * login to the server, if username or password not valid, just terminate
+	 */
 	private void login() {
 		CrawlerSocket loginSocket = new CrawlerSocket(host, port);
 
@@ -132,11 +137,16 @@ public class WebCrawler {
 
 				// enter the response header
 				if (line.contains("HTTP/1.1")) {
+					
+					//first, read all the header information
 					String status = null;
 					String encodeMode = null;
 					String connection = null;
 					String location = null;
 
+					//if status is 500, add path to the head of queue, and finish reading the info
+					//if status is 404, 403; just finish reading and go to next path
+					//if status is 301, get the location from header, and validate the path
 					if (line.contains("HTTP/1.1 500")) {
 						pathQueue.addFirst(path);
 						status = "500";
@@ -169,14 +179,15 @@ public class WebCrawler {
 						}
 					}
 					
-					//enter response body
+					
+					//enter response content body
 					if ("chunked".equals(encodeMode)) {
 						// this is chunked response
 						line = bf.readLine();
 						int size = 0;
 						StringBuilder sb = new StringBuilder();
 
-						// read all chuncks from the body
+						// read all chunks from the body
 						while (!"0".equals(line)) {
 							// read size of this chuck
 							String sizeStr = line;
@@ -212,11 +223,14 @@ public class WebCrawler {
 						}
 					}
 
+					//if server close the connection, we should open another connection
 					if ("close".equals(connection)) {
 						crawlerSocket.close();
 						crawlerSocket = new CrawlerSocket(host, port);
 						bf = crawlerSocket.getReader();
 					}
+					
+					//get the next path, and send the get request
 					path = pathQueue.pollFirst();
 					crawlerSocket.sendHttpGetRequest(path, csrfToken, sessionId);
 				}
@@ -227,6 +241,13 @@ public class WebCrawler {
 		}
 	}
 
+	/***
+	 *  read exact length of chars from bufferedReader
+	 * @param bf
+	 * @param size
+	 * @param buffer
+	 * @throws IOException
+	 */
 	private void readContent(BufferedReader bf, int size, char[] buffer)
 			throws IOException {
 		int remainingLen = size;

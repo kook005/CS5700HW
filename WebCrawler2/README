@@ -1,0 +1,63 @@
+--------------
+0. Useful info
+--------------
+
+(1) compile the code : run make 
+
+(2) clean the executable file : run make clean
+
+(3) run client: ./webcrawler [username] [password] 
+
+
+-------------------------
+1. Command Line Arguments 
+-------------------------
+Example : ./webcrawler [username] [password] 
+
+[usernmae] | [password]
+  (required) username is the valid username for the fakebook , password is the valid password for the fakebook
+
+
+------------------
+2. Design Approach
+------------------
+
+In this project, we wrap the useful information related to the socket in the class CrawlerSocket, which is futher used in our Crawler.
+In the crawler, We use a queue to maintain the paths need to be procesed, a hashset to maintain paths visited, and a hashset to contain flags found.
+
+We implement our Crawler in the following steps:
+(1) first, send a get request to get the auth sessionId and csrfToken
+(2) build a http post message to successfully login to fakebook, which will get a sessionId from the server
+(3) start crawling the paths in the queue one by one
+    For each path, we analyze the response based on different status code we get, and store the new paths if we get some
+(4) if all flags found, or the queue is empty, just terminate.
+
+Besides, we use some regex expressions to help us analyze the responses.
+
+
+-------------------
+3. Challenges Faced
+-------------------
+(1) When we start to crawl the websites at the beginning, we faced the problem that can't get the persistent connection. We solved it by carefully anylyze
+    the headers and read the content of response exactly, and then we get the persistent connection which speed our crawler a lot.
+
+
+----------------------------
+4. Approach to test our code
+----------------------------
+(1) Input test:
+
+    To make sure the command specify the correct arguments, we write some simple junit test to test different scenarios. To make sure
+    it satisfies the requirements.
+
+(2) Functional test:
+    
+    To make sure we can receive the correct secret flags, after we finish the code, we run client(for both) several times to get result multiple times.
+    And make sure that we get the same result every time. (use some simple tools : like diff)
+
+(3) Exception test:
+    
+    To make sure that our client program could response to the unvalid message, we write a simple server which could response the message with wrong
+    format.
+	
+
