@@ -25,7 +25,7 @@ public class CrawlerUtil {
 
 	public static Set<String> regexMultipleHelper(String pattern, String response) {
 		
-		Set<String> result = new HashSet<>();
+		Set<String> result = new HashSet<String>();
 		
 		Pattern p = Pattern.compile(pattern);
 		Matcher m = p.matcher(response);

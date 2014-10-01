@@ -39,9 +39,9 @@ public class WebCrawler {
 		try {
 			URI uri = new URI(LOGIN_URL);
 			host = uri.getHost();
-			pathQueue = new LinkedList<>();
-			pathVisited = new HashSet<>();
-			secretFlags = new HashSet<>();
+			pathQueue = new LinkedList<String>();
+			pathVisited = new HashSet<String>();
+			secretFlags = new HashSet<String>();
 		} catch (URISyntaxException e) {
 			System.err.println("invalid login url");
 			System.exit(1);
