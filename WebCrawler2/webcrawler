@@ -1,0 +1,6 @@
+#!/bin/bash
+
+cd src
+java WebCrawlerApp $*
+cd ..
+
